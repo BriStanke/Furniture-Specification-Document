@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baldų Specifikacija – INOA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: #edeae5;
+      color: #1a1a1a;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 270px; min-width: 270px;
+      background: #fafaf9;
+      border-right: 1px solid #e4e0db;
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar-header { padding: 22px 18px 14px; border-bottom: 1px solid #e4e0db; }
+    .sidebar-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: #1a1a1a; margin-bottom: 2px; }
+    .sidebar-sub { font-size: 10px; color: #aaa; letter-spacing: 0.08em; }
+
+    .doc-meta { padding: 16px 18px; border-bottom: 1px solid #e4e0db; }
+    .doc-meta label { display: block; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+    .doc-meta input { width: 100%; font-size: 12px; padding: 5px 7px; border: 1px solid #e4e0db; border-radius: 4px; background: #fff; color: #1a1a1a; outline: none; margin-bottom: 9px; font-family: inherit; }
+    .doc-meta input:focus { border-color: #bbb; }
+
+    .nav-panel { flex: 1; padding: 16px 18px; overflow-y: auto; }
+    .nav-panel h3 { font-size: 9px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 8px; }
+
+    .nav-pill {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 8px; border: 1px solid #e8e4df;
+      border-radius: 5px; background: #fff;
+      margin-bottom: 4px; cursor: grab;
+      transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+      user-select: none;
+    }
+    .nav-pill:hover { border-color: #ccc; background: #fefefe; }
+    .nav-pill.is-dragging { opacity: 0.3; cursor: grabbing; }
+    .nav-pill.drop-before { border-top: 2px solid #1a1a1a; }
+    .nav-pill.drop-after  { border-bottom: 2px solid #1a1a1a; }
+    .nav-drag-icon { color: #ccc; font-size: 12px; flex-shrink: 0; }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .nav-dot.cover   { background: #bbb; }
+    .nav-dot.section { background: #888; }
+    .nav-dot.content { background: #c8a882; }
+    .nav-dot.index   { background: #c5c5c5; }
+    .nav-dot.thanks  { background: #a8c5b5; }
+    .nav-pill-name { font-size: 11px; color: #444; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-pill-pg { font-size: 10px; color: #ccc; flex-shrink: 0; }
+    .nav-pill-del { font-size: 10px; color: #ddd; background: none; border: none; cursor: pointer; flex-shrink: 0; padding: 0 2px; transition: color 0.12s; }
+    .nav-pill-del:hover { color: #e24b4a; }
+
+    .add-pages-panel { padding: 12px 18px; border-top: 1px solid #e4e0db; }
+    .add-pages-panel h3 { font-size: 9px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 8px; }
+    .add-page-btn-sm { display: block; width: 100%; padding: 6px 10px; font-size: 10px; letter-spacing: 0.04em; border: 1px dashed #ddd; border-radius: 4px; background: none; color: #999; cursor: pointer; font-family: inherit; margin-bottom: 5px; text-align: left; transition: background 0.12s, color 0.12s; }
+    .add-page-btn-sm:hover { background: #fff; color: #333; border-color: #aaa; }
+
+    .sidebar-footer { padding: 16px 18px; border-top: 1px solid #e4e0db; }
+    .btn-primary { width: 100%; padding: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #1a1a1a; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-primary:hover { background: #333; }
+    .btn-secondary { width: 100%; padding: 9px; font-size: 11px; background: none; border: 1px solid #e4e0db; border-radius: 5px; cursor: pointer; color: #777; font-family: inherit; margin-top: 7px; transition: border-color 0.15s; }
+    .btn-secondary:hover { border-color: #bbb; color: #333; }
+
+    /* ─── Main canvas ─── */
+    .main { flex: 1; overflow-y: auto; background: #edeae5; padding: 40px 28px; }
+
+    /* ─── A4 page ─── */
+    .page { width: 794px; min-height: 1123px; max-width: 100%; margin: 0 auto 32px; background: #fff; box-shadow: 0 2px 24px rgba(0,0,0,0.10); position: relative; page-break-after: always; }
+    .page:last-child { margin-bottom: 0; }
+    .page-num { position: absolute; top: 32px; right: 40px; font-size: 9px; color: #ccc; letter-spacing: 0.12em; }
+    .page-del-btn { position: absolute; top: 12px; left: 12px; font-size: 9px; color: #ddd; border: none; background: none; cursor: pointer; opacity: 0; z-index: 10; transition: opacity 0.2s, color 0.15s; }
+    .page:hover .page-del-btn { opacity: 1; }
+    .page-del-btn:hover { color: #e24b4a; }
+
+    /* ════════════ COVER ════════════ */
+    .cover { display: flex; flex-direction: column; min-height: 1123px; }
+    .cover-top { flex: 1; background-color: #f5f3ef; display: flex; flex-direction: column; justify-content: flex-end; padding: 64px 64px 48px; position: relative; overflow: hidden; }
+    .cover-eyebrow { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: #aaa; margin-bottom: 20px; }
+    .cover-headline { font-size: 52px; font-weight: 700; line-height: 1.0; color: #1a1a1a; letter-spacing: -0.01em; outline: none; display: block; white-space: pre-line; }
+    .cover-headline:focus { border-bottom: 1px solid #ccc; }
+    .cover-tagline { font-size: 11px; color: #888; letter-spacing: 0.06em; margin-top: 18px; max-width: 360px; line-height: 1.6; outline: none; }
+    .cover-image-strip { height: 240px; background-color: #d6d2cc; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+    .cover-image-strip img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-image-strip .img-placeholder-big { font-size: 11px; color: #aaa; letter-spacing: 0.08em; text-transform: uppercase; }
+    .cover-image-strip .img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
+    .cover-image-strip:hover .img-overlay { display: flex; }
+    .cover-image-strip input[type=file] { display: none; }
+    .cover-bottom { padding: 36px 64px 40px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; border-top: 1px solid #ede9e3; }
+    .cover-meta-item label { font-size: 8px; letter-spacing: 0.25em; text-transform: uppercase; color: #bbb; display: block; margin-bottom: 5px; }
+    .cover-meta-value { font-size: 12px; color: #1a1a1a; outline: none; border-bottom: 1px solid transparent; display: inline-block; }
+    .cover-meta-value:focus { border-bottom-color: #e0dcd7; }
+    .cover-prepared { font-size: 9px; color: #bbb; margin-top: 6px; letter-spacing: 0.06em; }
+
+    /* ════════════ SECTION TITLE ════════════ */
+    .section-title-page { min-height: 1123px; display: flex; flex-direction: column; background-color: #f5f3ef; }
+    .stp-image { height: 320px; background-color: #ddd; overflow: hidden; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
+    .stp-image img { width: 100%; height: 100%; object-fit: cover; }
+    .stp-image .img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
+    .stp-image:hover .img-overlay { display: flex; }
+    .stp-image input[type=file] { display: none; }
+    .stp-body { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 64px 64px 56px; position: relative; overflow: hidden; }
+    .stp-bg-num { position: absolute; right: -20px; bottom: -50px; font-size: 320px; font-weight: 800; color: rgba(0,0,0,0.06); line-height: 1; user-select: none; pointer-events: none; letter-spacing: -0.04em; }
+    .stp-chapter { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: #aaa; margin-bottom: 16px; }
+    .stp-title { font-size: 44px; font-weight: 700; line-height: 1.05; color: #1a1a1a; outline: none; display: block; white-space: pre-line; }
+    .stp-title:focus { border-bottom: 1px solid #ccc; }
+    .stp-desc { margin-top: 20px; font-size: 11px; color: #888; max-width: 380px; line-height: 1.7; outline: none; }
+
+    /* ════════════ CONTENT PAGE ════════════ */
+    .content-page { min-height: 1123px; padding: 56px 56px 64px; }
+    .cp-header { display: flex; align-items: baseline; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid #1a1a1a; margin-bottom: 36px; }
+    .cp-room-label { font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #1a1a1a; outline: none; border-bottom: 1px solid transparent; }
+    .cp-room-label:focus { border-bottom-color: #ccc; }
+    .cp-header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .cp-add-btn { font-size: 9px; color: #bbb; background: none; border: 1px dashed #ddd; border-radius: 3px; padding: 2px 8px; cursor: pointer; font-family: inherit; transition: color 0.15s, border-color 0.15s; }
+    .cp-add-btn:hover { color: #555; border-color: #aaa; }
+
+    .item-row { display: grid; grid-template-columns: 100px 1fr; gap: 24px; padding: 20px 0; border-bottom: 1px solid #f0ede8; position: relative; }
+    .item-row:last-of-type { border-bottom: none; }
+    .item-row.dragging { opacity: 0.35; }
+    .item-row.drag-over { border-top: 2px solid #1a1a1a; }
+    .item-drag-handle { position: absolute; left: -18px; top: 50%; transform: translateY(-50%); color: #ccc; font-size: 13px; cursor: grab; opacity: 0; transition: opacity 0.15s; user-select: none; }
+    .item-row:hover .item-drag-handle { opacity: 1; }
+    .item-img-wrap { width: 100px; height: 100px; border: 1px solid #e8e4df; background-color: #f9f8f5; overflow: hidden; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .item-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .item-img-wrap .img-ph { font-size: 9px; color: #ccc; text-align: center; padding: 8px; line-height: 1.5; }
+    .item-img-wrap input[type=file] { display: none; }
+    .item-img-wrap .img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; font-size: 9px; color: #fff; }
+    .item-img-wrap:hover .img-overlay { display: flex; }
+    .item-details { display: flex; flex-direction: column; gap: 0; }
+    .item-supplier { font-size: 8px; letter-spacing: 0.28em; text-transform: uppercase; color: #aaa; margin-bottom: 4px; outline: none; border-bottom: 1px solid transparent; }
+    .item-supplier:focus { border-bottom-color: #e0dcd7; }
+    .item-name { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 10px; outline: none; border-bottom: 1px solid transparent; }
+    .item-name:focus { border-bottom-color: #e0dcd7; }
+    .item-specs { display: grid; grid-template-columns: 68px 1fr; gap: 4px 0; font-size: 10px; }
+    .spec-label { color: #bbb; text-transform: uppercase; letter-spacing: 0.08em; font-size: 8px; padding-top: 1px; }
+    .spec-val { color: #555; outline: none; border-bottom: 1px solid transparent; font-family: inherit; font-size: 10px; }
+    .spec-val:focus { border-bottom-color: #e0dcd7; }
+    .spec-val.care { color: #777; font-style: italic; }
+    .item-del-btn { position: absolute; top: 18px; right: 0; font-size: 9px; color: #ddd; border: none; background: none; cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s; }
+    .item-row:hover .item-del-btn { opacity: 1; }
+    .item-del-btn:hover { color: #e24b4a; }
+
+    /* ════════════ INDEX ════════════ */
+    .index-page { min-height: 1123px; padding: 64px 64px; position: relative; }
+    .index-eyebrow { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: #bbb; margin-bottom: 48px; }
+    .index-list { list-style: none; }
+    .index-item { display: flex; align-items: baseline; padding: 14px 0; border-bottom: 1px solid #f0ede8; gap: 12px; }
+    .index-num { font-size: 9px; color: #ccc; min-width: 24px; }
+    .index-item-name { font-size: 14px; font-weight: 400; color: #555; letter-spacing: 0.02em; flex: 1; outline: none; border-bottom: 1px solid transparent; }
+    .index-item-name:focus { border-bottom-color: #e0dcd7; }
+    .index-line { flex: 1; border-bottom: 1px dotted #e0dcd7; margin: 0 8px; min-width: 40px; }
+    .index-pg { font-size: 9px; color: #bbb; outline: none; border-bottom: 1px solid transparent; }
+    .index-pg:focus { border-bottom-color: #e0dcd7; }
+
+    /* ════════════ THANK YOU ════════════ */
+    .thankyou-page { min-height: 1123px; display: flex; flex-direction: column; }
+    .ty-image { flex: 1; background-color: #d6d2cc; cursor: pointer; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .ty-image img { width: 100%; height: 100%; object-fit: cover; }
+    .ty-image input[type=file] { display: none; }
+    .ty-image .img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
+    .ty-image:hover .img-overlay { display: flex; }
+    .ty-image .img-placeholder-big { font-size: 11px; color: #aaa; letter-spacing: 0.08em; }
+    .ty-bottom { padding: 48px 64px 52px; border-top: 1px solid #ede9e3; }
+    .ty-title { font-size: 32px; font-weight: 700; color: #1a1a1a; margin-bottom: 14px; outline: none; }
+    .ty-body { font-size: 11px; color: #888; line-height: 1.8; max-width: 420px; outline: none; }
+    .ty-studio { margin-top: 28px; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: #bbb; }
+
+    /* ════════════ PRINT ════════════ */
+    @media print {
+      @page { size: A4; margin: 0; }
+      body { background: white; }
+
+      /* Force ALL backgrounds and colours to print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      .sidebar, .page-del-btn, .cp-add-btn,
+      .item-del-btn, .item-drag-handle { display: none !important; }
+
+      .app { display: block; height: auto; overflow: visible; }
+      .main { padding: 0; background: white; overflow: visible; }
+      .page { box-shadow: none; width: 210mm; max-width: 100%; margin: 0; page-break-after: always; }
+
+      .section-title-page { background-color: #f5f3ef !important; }
+      .cover-top           { background-color: #f5f3ef !important; }
+      .cover-image-strip   { background-color: #d6d2cc !important; }
+      .stp-image           { background-color: #ddd !important; }
+      .ty-image            { background-color: #d6d2cc !important; }
+      .stp-bg-num          { color: rgba(0,0,0,0.06) !important; }
+
+      [contenteditable] { outline: none !important; border-bottom: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">INOA Studio</div>
+      <div class="sidebar-sub">Dokumentų redaktorius</div>
+    </div>
+
+    <div class="doc-meta">
+      <label>Kliento vardas</label>
+      <input id="clientName" value="Žukauskų šeima" />
+      <label>Projektas</label>
+      <input id="projectName" value="Vilniaus butas" />
+      <label>Data</label>
+      <input id="docDate" value="2026 m. balandis" />
+      <label>Dizaineris</label>
+      <input id="preparedBy" value="INOA Interior Studio" />
+    </div>
+
+    <div class="nav-panel">
+      <h3>Puslapiai — vilkite norėdami pertvarkyti</h3>
+      <div id="navList"></div>
+    </div>
+
+    <div class="add-pages-panel">
+      <h3>Pridėti puslapį</h3>
+      <button class="add-page-btn-sm" onclick="addContentPage()">+ Turinio puslapis</button>
+      <button class="add-page-btn-sm" onclick="addSectionTitlePage()">+ Skyriaus titulas</button>
+      <button class="add-page-btn-sm" onclick="addIndexPage()">+ Turinys</button>
+      <button class="add-page-btn-sm" onclick="addThankYouPage()">+ Padėkos puslapis</button>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn-primary" onclick="window.print()">Spausdinti / PDF</button>
+      <button class="btn-secondary" onclick="if(confirm('Pradėti naują dokumentą?')) location.reload()">Naujas dokumentas</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <div class="main">
+    <div id="pagesContainer"></div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════
+let pages = [
+  { id: 'p_cover', type: 'cover',
+    headline: 'BALDŲ\nSPECIFIKACIJA.', tagline: 'Šiame dokumente pateikiama visa informacija apie pasirinktus baldus, apšvietimą ir apdailos medžiagas.', coverImg: '' },
+  { id: 'p_index', type: 'index',
+    items: [
+      { name: 'Apžvalga', page: '1' }, { name: 'Gyvenamasis kambarys', page: '3' },
+      { name: 'Valgomasis', page: '4' }, { name: 'Miegamasis', page: '5' },
+      { name: 'Virtuvė', page: '6' }, { name: 'Vonios kambarys', page: '7' }, { name: 'Apšvietimas', page: '8' }
+    ]
+  },
+  { id: 'p_sec1', type: 'sectionTitle',
+    chapter: '01 — Baldai', title: 'Baldai\nir Apšvietimas.', description: 'Visi baldai parinkti atsižvelgiant į jūsų gyvenimo būdą, estetines preferencijas ir projekto biudžetą.', sectionImg: '' },
+  { id: 'p_lr', type: 'content', room: 'GYVENAMASIS KAMBARYS',
+    items: [
+      { id: 'i1', supplier: 'B&B Italia', collection: "Alcova '18", name: 'Sofa Alcova', material: 'Audinys (60% akrilinis, 35% medvilnė, 5% poliesteris)', colour: 'Smėlio', dimensions: '360 cm (W) × 110 cm (D) × 70 cm (H)', care: 'Siurbkite švelniai. Dėmes valykite skiestu audiniu valymo priemone. Saugokite nuo tiesioginių saulės spindulių.', link: 'bebitalia.com', notes: '', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&q=80' },
+      { id: 'i2', supplier: 'MDF Italia', collection: 'Array', name: 'Kavos staliukas Array', material: 'Grūdintas stiklas ir milteliniu būdu dažytas plienas', colour: 'Grafito rėmas / skaidrus viršus', dimensions: '180 cm (L) × 80 cm (W) × 40 cm (H)', care: 'Valykite neutralaus pH stiklo valymo priemone. Saugokite nuo abrazyvinių priemonių.', link: 'mdfitalia.it', notes: '', img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300&q=80' },
+      { id: 'i3', supplier: 'Arper', collection: 'Semiton 3', name: 'Komoda Semiton', material: 'Lakuotas MDF ir aliuminio pagrindas', colour: 'Terakota / bordeaux', dimensions: '220 cm (W) × 45 cm (D) × 70 cm (H)', care: 'Reguliariai šluostykite drėgnu audiniu ir švelniu muilu.', link: 'arper.com', notes: '', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&q=80' }
+    ]
+  },
+  { id: 'p_din', type: 'content', room: 'VALGOMASIS',
+    items: [
+      { id: 'i4', supplier: 'Kavehome', collection: '', name: 'Onix valgomojo stalas', material: 'Riešutmedžio furniras, tamsus lakavimas', colour: 'Tamsiai rudas', dimensions: '2000 × 800 mm', care: 'Šluostykite sausa arba šiek tiek drėgna šluoste.', link: 'kavehome.com', notes: '', img: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=300&q=80' },
+      { id: 'i5', supplier: 'Jasevičiaus Baldai', collection: 'Sumo', name: 'Sumo valgomojo kėdė', material: 'Ąžuolas, audinys', colour: 'Natūrali mediena', dimensions: '—', care: 'Reguliariai dulkinkite, audinio dėmes valykite švelniai.', link: 'jaseviciausbaldai.lt', notes: '6 kėdės', img: 'https://images.unsplash.com/photo-1503602642458-232111445657?w=300&q=80' }
+    ]
+  },
+  { id: 'p_sec2', type: 'sectionTitle',
+    chapter: '02 — Apšvietimas', title: 'Apšvietimas.', description: 'Apšvietimo sprendimai parinkti kuriant jaukią ir funkcionalią aplinką kiekviename kambaryje.', sectionImg: '' },
+  { id: 'p_light', type: 'content', room: 'APŠVIETIMAS',
+    items: [
+      { id: 'i6', supplier: 'Vibia', collection: 'Kontorno', name: 'Kontorno pakabinamas šviestuvas', material: 'Modernus dizainas, LED', colour: '—', dimensions: '—', care: 'Reguliariai dulkinkite.', link: 'vibia.com', notes: 'Valgomojo šviestuvas', img: 'https://images.unsplash.com/photo-1565530916786-c53be68b72c3?w=300&q=80' },
+      { id: 'i7', supplier: 'Eko Liumeną', collection: 'Lumia', name: 'Lumia Black lubinis Ø60 · 59W LED', material: 'Metalinis korpusas, LED', colour: 'Juodas', dimensions: 'Ø600 mm', care: 'Reguliariai dulkinkite.', link: 'ekoliumenas.lt', notes: 'CCT pritemdymas', img: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=300&q=80' },
+      { id: 'i8', supplier: 'Focco', collection: '', name: 'LED apvalus veidrodis Ø80', material: 'Veidrodis su LED, šildymo padėklas', colour: '—', dimensions: 'Ø800 mm', care: 'Valykite stiklo valymo priemone.', link: 'laikasnamams.lt', notes: '3000–5700K, pritemdomas', img: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=300&q=80' }
+    ]
+  },
+  { id: 'p_ty', type: 'thankYou',
+    title: 'Ačiū.', body: 'Džiaugiamės, kad galėjome dirbti su jumis šiame projekte. Tikimės, kad jūsų namai taps vieta, kurioje kiekviena detalė atspindės jūsų asmenybę ir gyvenimo būdą.\n\nDėl bet kokių klausimų susisiekite su mumis.', tyImg: '' }
+];
+
+// Returns 1-based sequential number for section title pages only
+function getSectionNumber(pageId) {
+  let n = 0;
+  for (const p of pages) {
+    if (p.type === 'sectionTitle') { n++; if (p.id === pageId) return n; }
+  }
+  return n;
+}
+
+// ════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════
+function renderAll() {
+  const container = document.getElementById('pagesContainer');
+  container.innerHTML = '';
+  pages.forEach(p => container.appendChild(buildPage(p)));
+  buildNav();
+}
+
+function buildPage(p) {
+  const wrap = document.createElement('div');
+  wrap.className = 'page'; wrap.id = p.id;
+  if (p.id !== 'p_cover') {
+    const db = document.createElement('button');
+    db.className = 'page-del-btn'; db.textContent = '✕ ištrinti';
+    db.onclick = () => deletePage(p.id);
+    wrap.appendChild(db);
+  }
+  if      (p.type === 'cover')        wrap.appendChild(buildCover(p));
+  else if (p.type === 'index')        wrap.appendChild(buildIndex(p));
+  else if (p.type === 'sectionTitle') wrap.appendChild(buildSection(p));
+  else if (p.type === 'content')      wrap.appendChild(buildContent(p));
+  else if (p.type === 'thankYou')     wrap.appendChild(buildThanks(p));
+  return wrap;
+}
+
+// ── Cover (no big number) ──
+function buildCover(p) {
+  const d = document.createElement('div'); d.className = 'cover';
+  d.innerHTML = `
+    <div class="cover-top">
+      <div class="cover-eyebrow">Baldų specifikacija — Klientų perdavimo dokumentas</div>
+      <span class="cover-headline" contenteditable="true">${p.headline}</span>
+      <div class="cover-tagline" contenteditable="true">${p.tagline}</div>
+    </div>
+    <div class="cover-image-strip" id="cis">
+      ${p.coverImg ? `<img src="${p.coverImg}" alt="" />` : '<div class="img-placeholder-big">Pridėti projekto nuotrauką</div>'}
+      <div class="img-overlay">Keisti nuotrauką</div>
+      <input type="file" accept="image/*" id="cii" />
+    </div>
+    <div class="cover-bottom">
+      <div class="cover-meta-item"><label>Klientas</label><span class="cover-meta-value" contenteditable="true" id="cmv-client">${v('clientName')}</span></div>
+      <div class="cover-meta-item"><label>Projektas</label><span class="cover-meta-value" contenteditable="true" id="cmv-project">${v('projectName')}</span><div class="cover-prepared" id="cmv-date">${v('docDate')}</div></div>
+      <div class="cover-meta-item"><label>Parengė</label><span class="cover-meta-value" contenteditable="true" id="cmv-studio">${v('preparedBy')}</span></div>
+    </div>`;
+  d.querySelector('.cover-headline').addEventListener('blur', e => { p.headline = e.target.innerText; });
+  d.querySelector('.cover-tagline').addEventListener('blur', e => { p.tagline = e.target.innerText; });
+  d.querySelector('#cis').addEventListener('click', () => d.querySelector('#cii').click());
+  d.querySelector('#cii').addEventListener('change', e => { readImg(e, r => { p.coverImg = r; renderAll(); }); });
+  return d;
+}
+
+// ── Index ──
+function buildIndex(p) {
+  const d = document.createElement('div'); d.className = 'index-page';
+  d.innerHTML = `<div class="page-num">Turinys</div><div class="index-eyebrow">Turinys</div><ul class="index-list" id="il-${p.id}"></ul><button class="cp-add-btn" style="margin-top:16px" onclick="addIndexEntry('${p.id}')">+ Pridėti įrašą</button>`;
+  const ul = d.querySelector(`#il-${p.id}`);
+  p.items.forEach((item, i) => {
+    const li = document.createElement('li'); li.className = 'index-item';
+    li.innerHTML = `<span class="index-num">0${i+1}</span><span class="index-item-name" contenteditable="true">${item.name}</span><span class="index-line"></span><span class="index-pg" contenteditable="true">${item.page}</span>`;
+    li.querySelector('.index-item-name').addEventListener('blur', e => { item.name = e.target.textContent; });
+    li.querySelector('.index-pg').addEventListener('blur', e => { item.page = e.target.textContent; });
+    ul.appendChild(li);
+  });
+  return d;
+}
+function addIndexEntry(pid) { const pg = pages.find(p => p.id === pid); if (pg) { pg.items.push({ name: 'Naujas skyrius', page: '—' }); renderAll(); } }
+
+// ── Section title (auto-numbered, no cover "1") ──
+function buildSection(p) {
+  const n = getSectionNumber(p.id);
+  const d = document.createElement('div'); d.className = 'section-title-page';
+  d.innerHTML = `
+    <div class="stp-image" id="si-${p.id}">
+      ${p.sectionImg ? `<img src="${p.sectionImg}" alt="" />` : ''}
+      <div class="img-overlay">Pridėti nuotrauką</div>
+      <input type="file" accept="image/*" id="sf-${p.id}" />
+    </div>
+    <div class="stp-body">
+      <div class="stp-bg-num">${n}</div>
+      <div class="stp-chapter" contenteditable="true">${p.chapter}</div>
+      <span class="stp-title" contenteditable="true">${p.title}</span>
+      <div class="stp-desc" contenteditable="true">${p.description}</div>
+    </div>`;
+  d.querySelector('.stp-chapter').addEventListener('blur', e => { p.chapter = e.target.textContent; });
+  d.querySelector('.stp-title').addEventListener('blur', e => { p.title = e.target.innerText; });
+  d.querySelector('.stp-desc').addEventListener('blur', e => { p.description = e.target.textContent; });
+  d.querySelector(`#si-${p.id}`).addEventListener('click', () => d.querySelector(`#sf-${p.id}`).click());
+  d.querySelector(`#sf-${p.id}`).addEventListener('change', e => { readImg(e, r => { p.sectionImg = r; renderAll(); }); });
+  return d;
+}
+
+// ── Content ──
+let iDragSrc = null, iDragPg = null;
+function buildContent(p) {
+  const d = document.createElement('div'); d.className = 'content-page';
+  d.innerHTML = `<div class="cp-header"><span class="cp-room-label" contenteditable="true">${p.room}</span><div class="cp-header-actions"><button class="cp-add-btn" onclick="addItem('${p.id}')">+ Pridėti prekę</button></div></div><div class="items-container" id="ic-${p.id}"></div>`;
+  d.querySelector('.cp-room-label').addEventListener('blur', e => { p.room = e.target.textContent; });
+  const ic = d.querySelector(`#ic-${p.id}`);
+  p.items.forEach(item => ic.appendChild(buildItemRow(p.id, item)));
+  return d;
+}
+function buildItemRow(pageId, item) {
+  const row = document.createElement('div');
+  row.className = 'item-row'; row.draggable = true; row.dataset.itemId = item.id;
+  row.innerHTML = `
+    <div class="item-drag-handle">⠿</div>
+    <div class="item-img-wrap" onclick="triggerImg('${item.id}')">
+      ${item.img ? `<img src="${item.img}" alt="" />` : '<div class="img-ph">Spustelėkite,<br>kad pridėtumėte<br>nuotrauką</div>'}
+      <div class="img-overlay">Keisti</div>
+      <input type="file" accept="image/*" id="iimg-${item.id}" onchange="handleItemImg(event,'${item.id}')" />
+    </div>
+    <div class="item-details">
+      <div class="item-supplier" contenteditable="true">${item.supplier}</div>
+      <div class="item-name" contenteditable="true">${item.name}</div>
+      <div class="item-specs">
+        ${item.collection ? `<span class="spec-label">Kolekcija</span><span class="spec-val" contenteditable="true">${item.collection}</span>` : ''}
+        <span class="spec-label">Medžiaga</span><span class="spec-val" contenteditable="true">${item.material}</span>
+        <span class="spec-label">Spalva</span><span class="spec-val" contenteditable="true">${item.colour}</span>
+        <span class="spec-label">Matmenys</span><span class="spec-val" contenteditable="true">${item.dimensions}</span>
+        <span class="spec-label">Priežiūra</span><span class="spec-val care" contenteditable="true">${item.care}</span>
+        <span class="spec-label">Nuoroda</span><span class="spec-val" contenteditable="true">${item.link}</span>
+        ${item.notes ? `<span class="spec-label">Pastabos</span><span class="spec-val" contenteditable="true">${item.notes}</span>` : ''}
+      </div>
+    </div>
+    <button class="item-del-btn" onclick="delItem('${pageId}','${item.id}')">✕</button>`;
+  row.querySelector('.item-supplier').addEventListener('blur', e => { item.supplier = e.target.textContent; });
+  row.querySelector('.item-name').addEventListener('blur', e => { item.name = e.target.textContent; });
+  row.querySelectorAll('.spec-val').forEach(el => {
+    el.addEventListener('blur', e => {
+      const lbl = el.previousElementSibling?.textContent?.toLowerCase().trim();
+      const map = { 'medžiaga':'material','spalva':'colour','matmenys':'dimensions','priežiūra':'care','nuoroda':'link','pastabos':'notes','kolekcija':'collection' };
+      if (map[lbl]) item[map[lbl]] = e.target.textContent;
+    });
+  });
+  row.addEventListener('dragstart', e => { iDragSrc = item.id; iDragPg = pageId; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); });
+  row.addEventListener('dragend', () => row.classList.remove('dragging'));
+  row.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over'); });
+  row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+  row.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); row.classList.remove('drag-over'); if (iDragSrc && iDragSrc !== item.id) reorderItem(iDragPg, iDragSrc, pageId, item.id); });
+  return row;
+}
+
+// ── Thank you ──
+function buildThanks(p) {
+  const d = document.createElement('div'); d.className = 'thankyou-page';
+  d.innerHTML = `
+    <div class="ty-image" id="tyi-${p.id}">
+      ${p.tyImg ? `<img src="${p.tyImg}" alt="" />` : '<div class="img-placeholder-big">Pridėti nuotrauką</div>'}
+      <div class="img-overlay">Pridėti / keisti nuotrauką</div>
+      <input type="file" accept="image/*" id="tyf-${p.id}" />
+    </div>
+    <div class="ty-bottom">
+      <div class="ty-title" contenteditable="true">${p.title}</div>
+      <div class="ty-body" contenteditable="true">${p.body}</div>
+      <div class="ty-studio">${v('preparedBy')}</div>
+    </div>`;
+  d.querySelector('.ty-title').addEventListener('blur', e => { p.title = e.target.textContent; });
+  d.querySelector('.ty-body').addEventListener('blur', e => { p.body = e.target.textContent; });
+  d.querySelector(`#tyi-${p.id}`).addEventListener('click', () => d.querySelector(`#tyf-${p.id}`).click());
+  d.querySelector(`#tyf-${p.id}`).addEventListener('change', e => { readImg(e, r => { p.tyImg = r; renderAll(); }); });
+  return d;
+}
+
+// ════════════════════════════════════════════
+// SIDEBAR NAV — drag to reorder pages
+// ════════════════════════════════════════════
+let navDragId = null;
+
+function buildNav() {
+  const nav = document.getElementById('navList'); nav.innerHTML = '';
+  const labels = { cover:'Viršelis', index:'Turinys', sectionTitle:'Skyrius', content:'', thankYou:'Padėka' };
+  const dotCls = { cover:'cover', index:'index', sectionTitle:'section', content:'content', thankYou:'thanks' };
+
+  pages.forEach((p, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'nav-pill'; pill.dataset.pid = p.id;
+    const isCover = p.id === 'p_cover';
+    const name = p.type === 'content' ? p.room : (labels[p.type] || p.type);
+    pill.innerHTML = `
+      <span class="nav-drag-icon">${isCover ? '&nbsp;' : '⠿'}</span>
+      <span class="nav-dot ${dotCls[p.type]||''}"></span>
+      <span class="nav-pill-name">${name}</span>
+      <span class="nav-pill-pg">${i+1}</span>
+      ${isCover ? '' : `<button class="nav-pill-del" onclick="deletePage('${p.id}');event.stopPropagation()">✕</button>`}`;
+
+    pill.addEventListener('click', () => document.getElementById(p.id)?.scrollIntoView({ behavior:'smooth', block:'start' }));
+
+    if (!isCover) {
+      pill.draggable = true;
+      pill.addEventListener('dragstart', e => { navDragId = p.id; pill.classList.add('is-dragging'); e.dataTransfer.effectAllowed = 'move'; });
+      pill.addEventListener('dragend', () => { pill.classList.remove('is-dragging'); nav.querySelectorAll('.nav-pill').forEach(el => el.classList.remove('drop-before','drop-after')); });
+    }
+
+    pill.addEventListener('dragover', e => {
+      if (!navDragId || navDragId === p.id) return;
+      e.preventDefault();
+      nav.querySelectorAll('.nav-pill').forEach(el => el.classList.remove('drop-before','drop-after'));
+      const mid = pill.getBoundingClientRect().top + pill.offsetHeight / 2;
+      pill.classList.add(e.clientY < mid ? 'drop-before' : 'drop-after');
+    });
+    pill.addEventListener('dragleave', () => pill.classList.remove('drop-before','drop-after'));
+    pill.addEventListener('drop', e => {
+      e.preventDefault();
+      const before = pill.classList.contains('drop-before');
+      pill.classList.remove('drop-before','drop-after');
+      if (!navDragId || navDragId === p.id) return;
+      reorderPage(navDragId, p.id, before);
+      navDragId = null;
+    });
+
+    nav.appendChild(pill);
+  });
+}
+
+function reorderPage(fromId, toId, insertBefore) {
+  if (fromId === 'p_cover') return;
+  const fi = pages.findIndex(p => p.id === fromId);
+  const [pg] = pages.splice(fi, 1);
+  let ti = pages.findIndex(p => p.id === toId);
+  if (!insertBefore) ti++;
+  ti = Math.max(1, ti); // cover always at 0
+  pages.splice(ti, 0, pg);
+  renderAll();
+}
+
+// ════════════════════════════════════════════
+// CRUD helpers
+// ════════════════════════════════════════════
+function reorderItem(fromPg, fromId, toPg, toId) {
+  const fP = pages.find(p=>p.id===fromPg), tP = pages.find(p=>p.id===toPg);
+  if (!fP||!tP) return;
+  const fi = fP.items.findIndex(i=>i.id===fromId); const [it] = fP.items.splice(fi,1);
+  const ti = tP.items.findIndex(i=>i.id===toId); tP.items.splice(ti,0,it);
+  renderAll();
+}
+function addItem(pid) {
+  const pg = pages.find(p=>p.id===pid); if (!pg) return;
+  pg.items.push({ id:'i'+Date.now(), supplier:'Tiekėjas', name:'Nauja prekė', collection:'', material:'', colour:'', dimensions:'', care:'', link:'', notes:'', img:'' });
+  renderAll(); setTimeout(()=>document.getElementById(pid)?.scrollIntoView({behavior:'smooth',block:'end'}),60);
+}
+function delItem(pid,iid) { const pg=pages.find(p=>p.id===pid); if(pg){pg.items=pg.items.filter(i=>i.id!==iid);renderAll();} }
+function deletePage(pid) { if(pid==='p_cover') return; if(confirm('Ištrinti šį puslapį?')){pages=pages.filter(p=>p.id!==pid);renderAll();} }
+function triggerImg(iid) { document.getElementById('iimg-'+iid)?.click(); }
+function handleItemImg(e,iid) { readImg(e,r=>{for(const pg of pages){if(!pg.items)continue;const it=pg.items.find(i=>i.id===iid);if(it){it.img=r;break;}}renderAll();}); }
+function readImg(e,cb) { const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>cb(ev.target.result); r.readAsDataURL(f); }
+function v(id) { return document.getElementById(id)?.value||''; }
+
+function addContentPage() {
+  const id='p_'+Date.now(); pages.splice(pages.length-1,0,{id,type:'content',room:'NAUJAS KAMBARYS',items:[{id:'i'+Date.now(),supplier:'Tiekėjas',name:'Nauja prekė',collection:'',material:'',colour:'',dimensions:'',care:'',link:'',notes:'',img:''}]});
+  renderAll(); setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth'}),80);
+}
+function addSectionTitlePage() {
+  const id='p_'+Date.now(); pages.splice(pages.length-1,0,{id,type:'sectionTitle',chapter:'0X — Naujas skyrius',title:'Naujas\nSkyrius.',description:'Skyriaus aprašymas.',sectionImg:''});
+  renderAll(); setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth'}),80);
+}
+function addIndexPage() {
+  const id='p_'+Date.now(); pages.splice(1,0,{id,type:'index',items:[{name:'Skyrius',page:'1'}]}); renderAll();
+}
+function addThankYouPage() {
+  const id='p_'+Date.now(); pages.push({id,type:'thankYou',title:'Ačiū.',body:'Dėkojame, kad pasitikėjote mumis.',tyImg:''});
+  renderAll(); setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth'}),80);
+}
+
+// Sync sidebar inputs → cover
+function syncMeta() {
+  const [cl,pr,dt,pb] = ['clientName','projectName','docDate','preparedBy'].map(v);
+  const el=(id)=>document.getElementById(id);
+  if(el('cmv-client'))  el('cmv-client').textContent=cl;
+  if(el('cmv-project')) el('cmv-project').textContent=pr;
+  if(el('cmv-date'))    el('cmv-date').textContent=dt;
+  if(el('cmv-studio'))  el('cmv-studio').textContent=pb;
+  document.querySelectorAll('.ty-studio').forEach(e=>e.textContent=pb);
+}
+['clientName','projectName','docDate','preparedBy'].forEach(id=>document.getElementById(id)?.addEventListener('input',syncMeta));
+
+renderAll();
+</script>
+</body>
+</html>
